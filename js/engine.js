@@ -230,4 +230,10 @@
   }, { passive: true });
   laneScroll();
   contactsFx();
+  if (lane) {
+    lane.querySelectorAll("img").forEach(function (img) {
+      if (!img.complete) img.addEventListener("load", laneScroll);
+    });
+    window.addEventListener("load", laneScroll);
+  }
 })();

@@ -8,9 +8,6 @@
   var mapBox = document.getElementById("map");
   var mapBtn = document.getElementById("map-btn");
   var contacts = document.getElementById("contacts");
-  var lane = document.getElementById("rev-lane");
-  var laneWrap = document.getElementById("rev-lane-wrap");
-  var laneProg = document.getElementById("rev-progress");
 
   function setTop() {
     if (!chromeEl) return;
@@ -80,13 +77,52 @@
         var r = el.getBoundingClientRect();
         var x = (e.clientX - r.left) / r.width - 0.5;
         var y = (e.clientY - r.top) / r.height - 0.5;
-        el.style.transform = "rotate(" + (x * 5 - 2) + "deg)";
+        el.style.transform = "rotate(" + (x * 5 - 1.8) + "deg)";
       });
       el.addEventListener("pointerleave", function () {
         el.style.transform = "";
       });
     });
   }
+
+  var pages = document.querySelectorAll(".log-page");
+  var indexItems = document.querySelectorAll(".log-index li");
+  function highlightLog() {
+    if (!pages.length) return;
+    var topH = parseFloat(getComputedStyle(html).getPropertyValue("--top-h")) || 0;
+    var cur = 0;
+    pages.forEach(function (p, i) {
+      if (p.getBoundingClientRect().top <= topH + 120) cur = i;
+    });
+    indexItems.forEach(function (li, i) {
+      if (i === cur) li.classList.add("is-on");
+      else li.classList.remove("is-on");
+    });
+  }
+  window.addEventListener("scroll", highlightLog, { passive: true });
+  highlightLog();
+
+  function contactsFx() {
+    if (!contacts) return;
+    var r = contacts.getBoundingClientRect();
+    var y = window.innerHeight * 0.4;
+    var t = r.top;
+    var fx;
+    if (t >= window.innerHeight) fx = 48;
+    else if (t <= y) fx = 0;
+    else fx = 48 * (t - y) / (window.innerHeight - y);
+    contacts.style.setProperty("--fx", fx + "px");
+  }
+  var moving = false;
+  window.addEventListener("scroll", function () {
+    if (moving) return;
+    moving = true;
+    requestAnimationFrame(function () {
+      contactsFx();
+      moving = false;
+    });
+  }, { passive: true });
+  contactsFx();
 
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduce || !html.classList.contains("m-on")) return;
@@ -134,7 +170,7 @@
     if (el.classList.contains("in")) return;
     el.classList.add("in");
     if (el.hasAttribute("data-assemble") || el.classList.contains("marks")) assemble(el);
-    if (el.hasAttribute("data-curtain") || el.hasAttribute("data-frame")) {
+    if (el.hasAttribute("data-curtain")) {
       var done = function (ev) {
         if (ev.propertyName && ev.propertyName.indexOf("clip") === -1) return;
         el.classList.add("done");
@@ -144,7 +180,7 @@
     }
   }
 
-  var observed = document.querySelectorAll("[data-rv], [data-curtain], [data-frame], [data-light], [data-assemble]");
+  var observed = document.querySelectorAll("[data-rv], [data-curtain], [data-light], [data-assemble]");
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (en) {
       if (en.isIntersecting) reveal(en.target);
@@ -191,59 +227,4 @@
     observed.forEach(reveal);
     html.classList.remove("m-on");
   });
-
-  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-
-  function laneScroll() {
-    if (!lane || !laneWrap) return;
-    if (window.innerWidth < 900) {
-      lane.style.transform = "";
-      laneWrap.style.height = "";
-      return;
-    }
-    var extra = Math.max(0, lane.scrollWidth - laneWrap.clientWidth);
-    /* at most ~1.3 screens of scroll */
-    var cap = Math.round(window.innerHeight * 1.3);
-    var travel = Math.min(extra, cap);
-    var base = lane.offsetHeight + 20;
-    laneWrap.style.height = (base + travel) + "px";
-    var topH = parseFloat(getComputedStyle(html).getPropertyValue("--top-h")) || 0;
-    var start = laneWrap.getBoundingClientRect().top - topH;
-    var scrolled = clamp(-start, 0, travel);
-    var p = travel ? scrolled / travel : 0;
-    var shift = extra ? scrolled / (travel || 1) * extra : 0;
-    lane.style.transform = "translateX(" + (-shift) + "px)";
-    if (laneProg) laneProg.style.setProperty("--p", String(p));
-  }
-
-  function contactsFx() {
-    if (!contacts) return;
-    var r = contacts.getBoundingClientRect();
-    var y = window.innerHeight * 0.4;
-    var t = r.top;
-    var fx;
-    if (t >= window.innerHeight) fx = 48;
-    else if (t <= y) fx = 0;
-    else fx = 48 * (t - y) / (window.innerHeight - y);
-    contacts.style.setProperty("--fx", fx + "px");
-  }
-
-  var moving = false;
-  function onScrollMove() {
-    if (moving) return;
-    moving = true;
-    requestAnimationFrame(function () {
-      laneScroll();
-      contactsFx();
-      moving = false;
-    });
-  }
-  window.addEventListener("scroll", onScrollMove, { passive: true });
-  window.addEventListener("resize", function () {
-    setTop();
-    laneScroll();
-    contactsFx();
-  }, { passive: true });
-  laneScroll();
-  contactsFx();
 })();
